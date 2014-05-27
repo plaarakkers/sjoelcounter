@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+
+<Configuration>
+    <Capturing>
+        <!-- VIDEO, IMAGE, WEBCAM -->
+        <CaptureType>VIDEO</CaptureType>
+        <ImageCaptureFile>testfoto.jpg</ImageCaptureFile>
+        <VideoCaptureFile>VID_20140519_124054.mp4</VideoCaptureFile>
+        <WebcamCaptureDevice>0</WebcamCaptureDevice>
+    </Capturing>
+</Configuration>

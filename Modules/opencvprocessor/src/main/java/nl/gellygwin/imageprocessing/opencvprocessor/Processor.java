@@ -1,5 +1,6 @@
 package nl.gellygwin.imageprocessing.opencvprocessor;
 
+import java.util.concurrent.locks.Lock;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.InputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.output.PostProcessOutputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.output.PreProcessOutputHandler;
@@ -21,6 +22,10 @@ public class Processor {
 
     private final Pipeline pipeline;
 
+    private final Lock lock;
+
+    private Result lastResult;
+
     /**
      * Initialize the processor.
      */
@@ -35,35 +40,49 @@ public class Processor {
      * @param preProcessOutputHandler
      * @param postProcessOutputHandler
      * @param pipeline
+     * @param lock
+     *
      */
-    public Processor(InputHandler inputHandler, PreProcessOutputHandler preProcessOutputHandler, PostProcessOutputHandler postProcessOutputHandler, Pipeline pipeline) {
+    public Processor(InputHandler inputHandler, PreProcessOutputHandler preProcessOutputHandler, PostProcessOutputHandler postProcessOutputHandler, Pipeline pipeline, Lock lock) {
         this.inputHandler = inputHandler;
         this.preProcessOutputHandler = preProcessOutputHandler;
         this.postProcessOutputHandler = postProcessOutputHandler;
         this.pipeline = pipeline;
+        this.lock = lock;
     }
 
     /**
      * Start the processor.
      */
     public void start() {
-        Result previousResult = null;
-        while (inputHandler.hasNext() && !Thread.currentThread().isInterrupted()) {
-            Mat image = inputHandler.getImage();
+        try {
+            lock.lock();
+            Result previousResult = null;
+            while (inputHandler.hasNext() && !Thread.currentThread().isInterrupted()) {
+                Mat image = inputHandler.getImage();
 
-            if (!image.empty()) {
-                if (preProcessOutputHandler != null) {
-                    preProcessOutputHandler.output(image);
+                if (!image.empty()) {
+                    if (preProcessOutputHandler != null) {
+                        preProcessOutputHandler.output(image);
+                    }
+
+                    Result result = new Result(image);
+
+                    result = pipeline.process(result, previousResult);
+
+                    lastResult = result;
+
+                    previousResult = result;
+
+                    postProcessOutputHandler.output(result);
                 }
-
-                Result result = new Result(image);
-
-                result = pipeline.process(result, previousResult);
-
-                previousResult = result;
-
-                postProcessOutputHandler.output(result);
             }
+        } finally {
+            lock.unlock();
         }
+    }
+
+    public Result getLastResult() {
+        return lastResult;
     }
 }

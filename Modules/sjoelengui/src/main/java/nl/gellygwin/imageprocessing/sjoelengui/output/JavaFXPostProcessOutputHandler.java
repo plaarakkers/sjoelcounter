@@ -1,8 +1,11 @@
 package nl.gellygwin.imageprocessing.sjoelengui.output;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javafx.application.Platform;
-import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import nl.gellygwin.imageprocessing.opencvprocessor.Result;
 import nl.gellygwin.imageprocessing.opencvprocessor.output.PostProcessOutputHandler;
@@ -10,22 +13,29 @@ import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.domain.Sjoelbak;
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.domain.Sjoelsteen;
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoelbakElement;
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoelstenenElement;
+import nl.gellygwin.imageprocessing.sjoelengui.models.RoundResult;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Scalar;
+import org.opencv.highgui.Highgui;
 
 /**
  *
  * JavaFXPostProcessOutputHandler
  */
-public class JavaFXPostProcessOutputHandler extends AbstractJavaFXOutputHandler implements PostProcessOutputHandler {
+public class JavaFXPostProcessOutputHandler implements PostProcessOutputHandler {
 
-    private final TextArea output;
+    private final ImageView imageView;
 
-    public JavaFXPostProcessOutputHandler(ImageView imageView, TextArea output) {
-        super(imageView);
+    private final Function<Result, RoundResult> resultToRoundResult;
 
-        this.output = output;
+    private final Consumer<RoundResult> updateResults;
+
+    public JavaFXPostProcessOutputHandler(ImageView imageView, Function<Result, RoundResult> resultToRoundResult, Consumer<RoundResult> updateResults) {
+        this.imageView = imageView;
+        this.resultToRoundResult = resultToRoundResult;
+        this.updateResults = updateResults;
     }
 
     @Override
@@ -41,25 +51,33 @@ public class JavaFXPostProcessOutputHandler extends AbstractJavaFXOutputHandler 
         drawSjoelbak(image, sjoelbak);
         drawSjoelstenen(image, sjoelstenen);
 
+        Image fxImage = matToImage(image);
+
+        RoundResult rondeResult = resultToRoundResult.apply(result);
+
         Platform.runLater(() -> {
-            output.setText(String.format("%d sjoelste%s gevonden.\n", sjoelstenen.size(), sjoelstenen.size() == 1 ? "en" : "nen"));
-
-            sjoelbak.getAmountInLanes(sjoelstenen).entrySet().stream().forEach(entry -> {
-                output.appendText(String.format("Poort %d bevat %d ste%s\n", entry.getKey(), entry.getValue(), entry.getValue() == 1 ? "en" : "nen"));
-            });
+            imageView.setImage(fxImage);
+            updateResults.accept(rondeResult);
         });
-
-        setImage(image);
     }
 
     private void drawSjoelbak(Mat image, Sjoelbak sjoelbak) {
         Core.line(image, sjoelbak.getPoortenAreaStart(), sjoelbak.getPoortenAreaEnd(), new Scalar(0, 255, 0), 2);
+        Core.line(image, sjoelbak.getSjoelbakLeftEnd(), sjoelbak.getSjoelbakLeftStart(), new Scalar(255, 0, 0), 2);
     }
 
     private void drawSjoelstenen(Mat image, List<Sjoelsteen> sjoelstenen) {
-        sjoelstenen.parallelStream().forEach((sjoelsteen) -> {
+        sjoelstenen.stream().forEach((sjoelsteen) -> {
             Core.circle(image, sjoelsteen.getCenter(), 2, new Scalar(0, 0, 255), -1);
             Core.circle(image, sjoelsteen.getCenter(), sjoelsteen.getRadius(), new Scalar(0, 0, 255), 2);
         });
+    }
+
+    private Image matToImage(Mat image) {
+        MatOfByte matOfByte = new MatOfByte();
+        Highgui.imencode(".jpg", image, matOfByte);
+        ByteArrayInputStream stream = new ByteArrayInputStream(matOfByte.toArray());
+
+        return new Image(stream);
     }
 }

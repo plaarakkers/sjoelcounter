@@ -1,9 +1,7 @@
 package nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.domain;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.opencv.core.Point;
+import org.opencv.core.RotatedRect;
 
 /**
  *
@@ -17,37 +15,21 @@ public class Sjoelbak {
 
     private final Point poortenAreaEnd;
 
-    /**
-     *
-     * @param poortenAreaStart Top point for the poorten area.
-     * @param poortenAreaEnd Bottom point for the poorten area.
-     */
-    public Sjoelbak(Point poortenAreaStart, Point poortenAreaEnd) {
-        this.poortenAreaStart = poortenAreaStart;
-        this.poortenAreaEnd = poortenAreaEnd;
-    }
+    private final Point sjoelbakLeftStart;
 
-    public Map<Integer, Long> getAmountInLanes(List<Sjoelsteen> sjoelstenen) {
-        double portLaneWidth = (poortenAreaEnd.y - poortenAreaStart.y) / 4;
+    private final Point sjoelbakLeftEnd;
 
-        return sjoelstenen.parallelStream().filter(sjoelsteen -> {
-            return sjoelsteen.getCenter().x + sjoelsteen.getRadius() < poortenAreaStart.x;
-        }).collect(Collectors.groupingBy((Sjoelsteen sjoelsteen) -> {
-            //Check poort 1.
-            if (poortenAreaStart.y + portLaneWidth > sjoelsteen.getCenter().y - sjoelsteen.getRadius()) {
-                return Integer.valueOf(1);
-            }
-            //Check poort 4.
-            if (poortenAreaStart.y + portLaneWidth * 2 > sjoelsteen.getCenter().y - sjoelsteen.getRadius()) {
-                return Integer.valueOf(4);
-            }
-            //Check poort 3.
-            if (poortenAreaStart.y + portLaneWidth * 3 > sjoelsteen.getCenter().y - sjoelsteen.getRadius()) {
-                return Integer.valueOf(3);
-            }
+    private final double POORTENAREA_HEIGHT_FACTOR = 5.15;
 
-            return Integer.valueOf(2);
-        }, Collectors.counting()));
+    private final double POORTENAREA_LENGTH_FACTOR = 5;
+
+    public Sjoelbak(RotatedRect rectangle) {
+        poortenAreaStart = new Point(rectangle.center.x + (rectangle.size.width / 2), rectangle.center.y - (rectangle.size.height / 2));
+        poortenAreaEnd = new Point(poortenAreaStart.x, poortenAreaStart.y + (rectangle.size.height * POORTENAREA_HEIGHT_FACTOR));
+
+        double poortenAreaLength = (rectangle.size.height * POORTENAREA_LENGTH_FACTOR);
+        sjoelbakLeftStart = new Point(poortenAreaStart.x - poortenAreaLength, poortenAreaStart.y);
+        sjoelbakLeftEnd = new Point(sjoelbakLeftStart.x, poortenAreaEnd.y);
     }
 
     /**
@@ -62,5 +44,19 @@ public class Sjoelbak {
      */
     public Point getPoortenAreaEnd() {
         return poortenAreaEnd;
+    }
+
+    /**
+     * @return the sjoelbakLeftStart
+     */
+    public Point getSjoelbakLeftStart() {
+        return sjoelbakLeftStart;
+    }
+
+    /**
+     * @return the sjoelbakLeftEnd
+     */
+    public Point getSjoelbakLeftEnd() {
+        return sjoelbakLeftEnd;
     }
 }

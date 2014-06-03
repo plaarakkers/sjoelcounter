@@ -5,31 +5,69 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.cell.*?>
 
-<GridPane alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="nl.gellygwin.imageprocessing.sjoelengui.SjoelenGuiController">
+<GridPane alignment="CENTER" hgap="10.0" vgap="10.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="nl.gellygwin.imageprocessing.sjoelengui.SjoelenGuiController">
     <columnConstraints>
-        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        <ColumnConstraints hgrow="SOMETIMES" />
     </columnConstraints>
     <rowConstraints>
         <RowConstraints maxHeight="30.0" minHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
         <RowConstraints minHeight="10.0" prefHeight="1000.0" vgrow="SOMETIMES" />
-        <RowConstraints maxHeight="100.0" minHeight="100.0" prefHeight="100.0" vgrow="SOMETIMES" />
+        <RowConstraints maxHeight="150.0" minHeight="150.0" prefHeight="150.0" vgrow="SOMETIMES" />
     </rowConstraints>
     <children>
-        <Button fx:id="start" alignment="CENTER" mnemonicParsing="false" onAction="#startAction" prefHeight="31.0" prefWidth="172.0" text="Start" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
-        <Button fx:id="stop" alignment="CENTER" disable="true" mnemonicParsing="false" onAction="#stopAction" prefHeight="31.0" prefWidth="172.0" text="Stop" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
+        <HBox alignment="CENTER" spacing="10" GridPane.rowIndex="0">
+            <Button fx:id="start" alignment="CENTER" mnemonicParsing="false" onAction="#startAction" text="Start" />
+            <Button fx:id="stop" alignment="CENTER" disable="true" mnemonicParsing="false" onAction="#stopAction" text="Stop" />
+        </HBox>
+        
         <ScrollPane pickOnBounds="true" GridPane.rowIndex="1">
-            <content>
-                <ImageView fx:id="preProcess" preserveRatio="true" />
-            </content>
-        </ScrollPane>
-        <ScrollPane pickOnBounds="true" GridPane.columnIndex="1" GridPane.rowIndex="1">
             <content>
                 <ImageView fx:id="postProcess" preserveRatio="true"  />
             </content>
         </ScrollPane>
-        <TextArea fx:id="output" editable="false" prefHeight="20.0" prefWidth="200.0" GridPane.columnSpan="2" GridPane.rowIndex="2" />
+        <HBox alignment="CENTER" spacing="10" GridPane.rowIndex="2">
+            <VBox alignment="CENTER" spacing="10">
+                <Label text="Ronde" />
+                <Label fx:id="rondeLabel" />
+            </VBox>
+            <Button fx:id="reset" alignment="CENTER" mnemonicParsing="false" onAction="#resetAction" text="Reset" />
+            <TableView fx:id="result" editable="false">
+                <columns>
+                    <TableColumn text="Ronde">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="round" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Poort 1">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="poort1Count" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Poort 2">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="poort2Count" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Poort 3">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="poort3Count" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Poort 4">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="poort4Count" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Score">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="score" />
+                        </cellValueFactory>
+                    </TableColumn>
+                </columns>
+            </TableView>
+        </HBox>
     </children>
     <padding>
         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />

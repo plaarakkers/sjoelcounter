@@ -49,10 +49,7 @@ public class DetectSjoelbakElement implements PipelineElement {
             }
         }
 
-        Point poortenAreaStart = new Point(rectangle.center.x + (rectangle.size.width / 2), rectangle.center.y - (rectangle.size.height / 2));
-        Point poortenAreaEnd = new Point(poortenAreaStart.x, poortenAreaStart.y + (rectangle.size.height * 5.15));
-
-        Sjoelbak sjoelbak = new Sjoelbak(poortenAreaStart, poortenAreaEnd);
+        Sjoelbak sjoelbak = new Sjoelbak(rectangle);
 
         result.getData().put(SJOELBAK, sjoelbak);
 

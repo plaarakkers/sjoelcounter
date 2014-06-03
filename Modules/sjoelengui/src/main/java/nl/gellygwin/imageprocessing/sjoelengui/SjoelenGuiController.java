@@ -1,24 +1,37 @@
 package nl.gellygwin.imageprocessing.sjoelengui;
 
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableView;
 import javafx.scene.image.ImageView;
-import nl.gellygwin.imageprocessing.sjoelengui.output.JavaFXPostProcessOutputHandler;
-import nl.gellygwin.imageprocessing.sjoelengui.output.JavaFXPreProcessOutputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.Processor;
+import nl.gellygwin.imageprocessing.opencvprocessor.Result;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.ImageInputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.InputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.VideoFileCaptureInputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.WebcamCaptureInputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.output.PostProcessOutputHandler;
-import nl.gellygwin.imageprocessing.opencvprocessor.output.PreProcessOutputHandler;
 import nl.gellygwin.imageprocessing.opencvprocessor.pipeline.Pipeline;
+import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.domain.Sjoelbak;
+import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.domain.Sjoelsteen;
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoelbakElement;
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoelstenenElement;
+import nl.gellygwin.imageprocessing.sjoelengui.configuration.CaptureType;
+import nl.gellygwin.imageprocessing.sjoelengui.configuration.SjoelenGuiConfiguration;
+import nl.gellygwin.imageprocessing.sjoelengui.models.Round;
+import nl.gellygwin.imageprocessing.sjoelengui.models.RoundResult;
+import nl.gellygwin.imageprocessing.sjoelengui.output.JavaFXPostProcessOutputHandler;
+import org.controlsfx.dialog.Dialogs;
 
 /**
  *
@@ -27,19 +40,26 @@ import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoel
 public class SjoelenGuiController {
 
     @FXML
-    private TextArea output;
-
-    @FXML
     private Button stop;
 
     @FXML
     private Button start;
 
     @FXML
-    private ImageView preProcess;
+    private ImageView postProcess;
 
     @FXML
-    private ImageView postProcess;
+    private Label rondeLabel;
+
+    @FXML
+    private Button reset;
+
+    @FXML
+    private TableView<RoundResult> result;
+
+    private final Round round;
+
+    private final ObservableList<RoundResult> resultList;
 
     private Processor processor;
 
@@ -47,56 +67,78 @@ public class SjoelenGuiController {
 
     private InputHandler inputHandler;
 
+    private final SjoelenGuiConfiguration sjoelenGuiConfiguration;
+
+    private RoundResult previousRoundResult;
+
+    private final SjoelstenenMapper sjoelstenenMapper;
+
+    private final Lock lock;
+
+    public SjoelenGuiController() {
+        round = new Round();
+        sjoelstenenMapper = new SjoelstenenMapper();
+        resultList = FXCollections.observableArrayList();
+        sjoelenGuiConfiguration = new SjoelenGuiConfiguration();
+        lock = new ReentrantLock();
+    }
+
     @FXML
     private void startAction(ActionEvent event) {
-        //inputHandler = new WebcamCaptureInputHandler(0);
-        //inputHandler = new ImageInputHandler(Paths.get("") + "testfoto.jpg");
-        inputHandler = new VideoFileCaptureInputHandler(Paths.get("") + "VID_20140519_124054.mp4");
-        PreProcessOutputHandler preProcessOutputHandler = new JavaFXPreProcessOutputHandler(preProcess);
-        PostProcessOutputHandler postProcessOutputHandler = new JavaFXPostProcessOutputHandler(postProcess, output);
-        Pipeline pipeline = new Pipeline()
-                .addElement(new DetectSjoelbakElement())
-                .addElement(new DetectSjoelstenenElement());
+        if (round.getCurrent() == 3) {
+            Dialogs.create().nativeTitleBar().masthead(null).message("Er zijn al drie ronden gespeeld. Druk eerst op de \"Reset\" knop.").showError();
+        } else {
+            round.increase();
 
-        processor = new Processor(inputHandler, preProcessOutputHandler, postProcessOutputHandler, pipeline);
+            inputHandler = createInputHandler();
+            PostProcessOutputHandler postProcessOutputHandler = new JavaFXPostProcessOutputHandler(postProcess, this::resultToRoundResult, this::updateResults);
+            Pipeline pipeline = new Pipeline()
+                    .addElement(new DetectSjoelbakElement())
+                    .addElement(new DetectSjoelstenenElement());
 
-        processorTask = new Task<Void>() {
+            processor = new Processor(inputHandler, null, postProcessOutputHandler, pipeline, lock);
 
-            @Override
-            protected Void call() throws Exception {
-                processor.start();
+            processorTask = new Task<Void>() {
 
-                return null;
-            }
+                @Override
+                protected Void call() throws Exception {
+                    processor.start();
 
-            @Override
-            protected void cancelled() {
-                super.cancelled();
-                stop();
-            }
+                    return null;
+                }
 
-            @Override
-            protected void failed() {
-                super.failed();
-                output.appendText(String.format("task failed%s", System.lineSeparator()));
-                output.appendText(String.format("%s%s", getException().toString(), System.lineSeparator()));
+                @Override
+                protected void cancelled() {
+                    super.cancelled();
+                    stop();
+                }
 
-                stop();
-            }
+                @Override
+                protected void failed() {
+                    super.failed();
+                    stop();
+                    throw new SjoelenGuiException(getException().getMessage());
+                }
 
-            @Override
-            protected void succeeded() {
-                super.succeeded();
-                stop();
-            }
-        };
+                @Override
+                protected void succeeded() {
+                    super.succeeded();
+                    stop();
+                }
+            };
 
-        Thread thread = new Thread(processorTask);
-        thread.setDaemon(true);
-        thread.start();
+            Thread thread = new Thread(processorTask);
+            thread.setDaemon(true);
+            thread.start();
 
-        start.setDisable(true);
-        stop.setDisable(false);
+            setButtonsState(true);
+        }
+    }
+
+    @FXML
+    private void initialize() {
+        rondeLabel.textProperty().bind(round.getProperty());
+        result.setItems(resultList);
     }
 
     @FXML
@@ -104,9 +146,67 @@ public class SjoelenGuiController {
         processorTask.cancel(true);
     }
 
-    private void stop() {
-        inputHandler.release();
-        stop.setDisable(true);
-        start.setDisable(false);
+    @FXML
+    private void resetAction(ActionEvent event) {
+        round.reset();
+        resultList.clear();
+        previousRoundResult = null;
     }
+
+    private void stop() {
+        try {
+            lock.lock();
+            inputHandler.release();
+            setButtonsState(false);
+
+            //First update the results for the current round.
+            RoundResult roundResult = resultToRoundResult(processor.getLastResult());
+            updateResults(roundResult);
+
+            previousRoundResult = roundResult;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void setButtonsState(boolean running) {
+        start.setDisable(running);
+        stop.setDisable(!running);
+        reset.setDisable(running);
+    }
+
+    private InputHandler createInputHandler() {
+        CaptureType captureType = sjoelenGuiConfiguration.getCaptureType();
+        switch (captureType) {
+            case WEBCAM:
+                return new WebcamCaptureInputHandler(sjoelenGuiConfiguration.getWebcamCaptureDevice());
+            case IMAGE:
+                return new ImageInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration.getImageCaptureFile()));
+            case VIDEO:
+                return new VideoFileCaptureInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration.getVideoCaptureFile()));
+            default:
+                throw new SjoelenGuiException(String.format("Onbekende video capture type [%s] gevonden.", captureType.name()));
+        }
+    }
+
+    private RoundResult resultToRoundResult(Result result) {
+        @SuppressWarnings("unchecked")
+        Sjoelbak sjoelbak = (Sjoelbak) result.getData().get(DetectSjoelbakElement.SJOELBAK);
+
+        @SuppressWarnings("unchecked")
+        List<Sjoelsteen> sjoelstenen = (List<Sjoelsteen>) result.getData().get(DetectSjoelstenenElement.SJOELSTENEN);
+
+        Map<Integer, Integer> amountInPoorten = sjoelstenenMapper.mapSjoelstenenToPoorten(sjoelbak, sjoelstenen, previousRoundResult);
+
+        return new RoundResult(round.getCurrent(), amountInPoorten);
+    }
+
+    private void updateResults(RoundResult roundResult) {
+        if (resultList.size() == roundResult.getRound()) {
+            resultList.set(roundResult.getRound() - 1, roundResult);
+        } else {
+            resultList.add(roundResult);
+        }
+    }
+
 }

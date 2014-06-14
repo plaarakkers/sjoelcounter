@@ -8,4 +8,10 @@
         <VideoCaptureFile>VID_20140519_124054.mp4</VideoCaptureFile>
         <WebcamCaptureDevice>0</WebcamCaptureDevice>
     </Capturing>
+    <GoogleApi>
+    	<!-- Create project on https://console.developers.google.com/project and enable mirror api
+    	go to  APIs & auth -> Credentials and create a new client id for an installed application-->
+        <ClientId></ClientId>
+        <ClientSecret></ClientSecret>
+    </GoogleApi>
 </Configuration>

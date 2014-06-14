@@ -68,4 +68,22 @@ public class SjoelenGuiConfiguration {
              throw new SjoelenGuiException("Geen webcam capture device geconfigureerd.", e);
         }
     }
+    
+    public String getGoogleApiClientId() {
+        String googleApiClientId = configuration.getString("GoogleApi.ClientId");
+        if (googleApiClientId == null || googleApiClientId.isEmpty()) {
+            throw new SjoelenGuiException("Geen google api client id geconfigureerd.");
+        }
+        
+        return googleApiClientId;
+    }
+    
+    public String getGoogleApiClientSecret() {
+        String googleApiClientSecret = configuration.getString("GoogleApi.ClientSecret");
+        if (googleApiClientSecret == null || googleApiClientSecret.isEmpty()) {
+            throw new SjoelenGuiException("Geen google api client secret geconfigureerd.");
+        }
+        
+        return googleApiClientSecret;
+    }
 }

@@ -1,5 +1,6 @@
 package nl.gellygwin.imageprocessing.sjoelengui;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -10,10 +11,15 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.image.ImageView;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import nl.gellygwin.imageprocessing.opencvprocessor.Processor;
 import nl.gellygwin.imageprocessing.opencvprocessor.Result;
 import nl.gellygwin.imageprocessing.opencvprocessor.input.ImageInputHandler;
@@ -28,6 +34,7 @@ import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoel
 import nl.gellygwin.imageprocessing.opencvprocessor.sjoelen.pipeline.DetectSjoelstenenElement;
 import nl.gellygwin.imageprocessing.sjoelengui.configuration.CaptureType;
 import nl.gellygwin.imageprocessing.sjoelengui.configuration.SjoelenGuiConfiguration;
+import nl.gellygwin.imageprocessing.sjoelengui.glass.Glass;
 import nl.gellygwin.imageprocessing.sjoelengui.models.Round;
 import nl.gellygwin.imageprocessing.sjoelengui.models.RoundResult;
 import nl.gellygwin.imageprocessing.sjoelengui.output.JavaFXPostProcessOutputHandler;
@@ -38,12 +45,15 @@ import org.controlsfx.dialog.Dialogs;
  * SjoelenGuiController
  */
 public class SjoelenGuiController {
-
+    
     @FXML
     private Button stop;
 
     @FXML
     private Button start;
+
+    @FXML
+    private Button connectGlass;
 
     @FXML
     private ImageView postProcess;
@@ -56,6 +66,8 @@ public class SjoelenGuiController {
 
     @FXML
     private TableView<RoundResult> result;
+
+    private Stage primaryStage;
 
     private final Round round;
 
@@ -74,6 +86,8 @@ public class SjoelenGuiController {
     private final SjoelstenenMapper sjoelstenenMapper;
 
     private final Lock lock;
+    
+    private Glass glass;
 
     public SjoelenGuiController() {
         round = new Round();
@@ -81,6 +95,35 @@ public class SjoelenGuiController {
         resultList = FXCollections.observableArrayList();
         sjoelenGuiConfiguration = new SjoelenGuiConfiguration();
         lock = new ReentrantLock();
+    }
+
+    @FXML
+    private void connectGlassAction(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Glass.fxml"));
+
+            Stage stage = new Stage();
+            Parent root = loader.load();
+            Scene scene = new Scene(root);
+            stage.setTitle("glass");
+            stage.setScene(scene);
+            stage.initModality(Modality.WINDOW_MODAL);
+            stage.initOwner(primaryStage);
+            
+            GlassController glassController = loader.getController();
+            glassController.setStage(stage);
+            
+            stage.showAndWait();
+            
+            glass = glassController.getGlass();
+            
+            if (glass != null) {
+                glass.init();
+            }
+            
+        } catch (IOException e) {
+            throw new SjoelenGuiException(e.getMessage());
+        }
     }
 
     @FXML
@@ -151,6 +194,10 @@ public class SjoelenGuiController {
         round.reset();
         resultList.clear();
         previousRoundResult = null;
+        if (glass != null) {
+            glass.updateResult(resultList);
+        }
+        setButtonsState(false);
     }
 
     private void stop() {
@@ -173,6 +220,7 @@ public class SjoelenGuiController {
         start.setDisable(running);
         stop.setDisable(!running);
         reset.setDisable(running);
+        connectGlass.setDisable(running || round.getCurrent() > 0);
     }
 
     private InputHandler createInputHandler() {
@@ -202,11 +250,25 @@ public class SjoelenGuiController {
     }
 
     private void updateResults(RoundResult roundResult) {
+        RoundResult previousListResult = null;
         if (resultList.size() == roundResult.getRound()) {
-            resultList.set(roundResult.getRound() - 1, roundResult);
+            int index = roundResult.getRound() - 1;
+            previousListResult = resultList.get(index);
+            resultList.set(index, roundResult);
         } else {
             resultList.add(roundResult);
         }
+        
+        if (glass != null && (previousListResult == null || roundResult.getScore() != previousListResult.getScore()) ) {
+            glass.updateResult(resultList);
+        }
+    }
+
+    /**
+     * @param primaryStage the primaryStage to set
+     */
+    public void setPrimaryStage(Stage primaryStage) {
+        this.primaryStage = primaryStage;
     }
 
 }

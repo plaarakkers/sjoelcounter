@@ -17,7 +17,13 @@ public class SjoelenGui extends Application {
     public void start(Stage stage) throws Exception {
         Processor.initialize();
         
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/SjoelenGui.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SjoelenGui.fxml"));
+        Parent root = loader.load();
+        
+        SjoelenGuiController sjoelenGuiController = loader.getController();
+        
+        sjoelenGuiController.setPrimaryStage(stage);
+        
         Scene scene = new Scene(root);
         stage.setTitle("SjoelenGui");
         stage.setScene(scene);

@@ -32,7 +32,7 @@
                 <Label text="Ronde" />
                 <Label fx:id="rondeLabel" />
             </VBox>
-            <Button fx:id="reset" alignment="CENTER" mnemonicParsing="false" onAction="#resetAction" text="Reset" />
+            <Button fx:id="reset" alignment="CENTER" disable="true" mnemonicParsing="false" onAction="#resetAction" text="Reset" />
             <TableView fx:id="result" editable="false">
                 <columns>
                     <TableColumn text="Ronde">
@@ -67,6 +67,7 @@
                     </TableColumn>
                 </columns>
             </TableView>
+            <Button fx:id="connectGlass" alignment="CENTER" mnemonicParsing="false" onAction="#connectGlassAction" text="Connect Glass" />
         </HBox>
     </children>
     <padding>

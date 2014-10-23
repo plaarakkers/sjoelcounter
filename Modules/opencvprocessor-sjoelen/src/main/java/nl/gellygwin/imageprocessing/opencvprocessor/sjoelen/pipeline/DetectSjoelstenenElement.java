@@ -18,7 +18,7 @@ public class DetectSjoelstenenElement implements PipelineElement {
 
     @Override
     public Result processImage(Result result, Result previousImageResult) {
-        Mat image = result.getProcessedImage();
+        Mat image = result.getOriginalImage();
 
         Mat workingImage = image.clone();
 

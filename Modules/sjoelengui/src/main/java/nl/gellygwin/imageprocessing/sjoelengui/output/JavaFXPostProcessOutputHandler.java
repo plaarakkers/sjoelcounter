@@ -40,7 +40,7 @@ public class JavaFXPostProcessOutputHandler implements PostProcessOutputHandler 
 
     @Override
     public void output(Result result) {
-        Mat image = result.getProcessedImage();
+        Mat image = result.getOriginalImage();
 
         @SuppressWarnings("unchecked")
         Sjoelbak sjoelbak = (Sjoelbak) result.getData().get(DetectSjoelbakElement.SJOELBAK);

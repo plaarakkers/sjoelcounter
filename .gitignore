@@ -5,6 +5,5 @@ pom.xml.next
 release.properties
 
 *.mp4
-*.jpg
 *.backup
 /.project

@@ -14,6 +14,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
@@ -38,14 +40,13 @@ import nl.gellygwin.imageprocessing.sjoelengui.glass.Glass;
 import nl.gellygwin.imageprocessing.sjoelengui.models.Round;
 import nl.gellygwin.imageprocessing.sjoelengui.models.RoundResult;
 import nl.gellygwin.imageprocessing.sjoelengui.output.JavaFXPostProcessOutputHandler;
-import org.controlsfx.dialog.Dialogs;
 
 /**
  *
  * SjoelenGuiController
  */
 public class SjoelenGuiController {
-    
+
     @FXML
     private Button stop;
 
@@ -86,7 +87,7 @@ public class SjoelenGuiController {
     private final SjoelstenenMapper sjoelstenenMapper;
 
     private final Lock lock;
-    
+
     private Glass glass;
 
     public SjoelenGuiController() {
@@ -109,18 +110,18 @@ public class SjoelenGuiController {
             stage.setScene(scene);
             stage.initModality(Modality.WINDOW_MODAL);
             stage.initOwner(primaryStage);
-            
+
             GlassController glassController = loader.getController();
             glassController.setStage(stage);
-            
+
             stage.showAndWait();
-            
+
             glass = glassController.getGlass();
-            
+
             if (glass != null) {
                 glass.init();
             }
-            
+
         } catch (IOException e) {
             throw new SjoelenGuiException(e.getMessage());
         }
@@ -129,15 +130,19 @@ public class SjoelenGuiController {
     @FXML
     private void startAction(ActionEvent event) {
         if (round.getCurrent() == 3) {
-            Dialogs.create().nativeTitleBar().masthead(null).message("Er zijn al drie ronden gespeeld. Druk eerst op de \"Reset\" knop.").showError();
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setHeaderText(null);
+            alert.setContentText("Er zijn al drie ronden gespeeld. Druk eerst op de \"Reset\" knop.");
+            alert.showAndWait();
         } else {
             round.increase();
 
             inputHandler = createInputHandler();
-            PostProcessOutputHandler postProcessOutputHandler = new JavaFXPostProcessOutputHandler(postProcess, this::resultToRoundResult, this::updateResults);
+            PostProcessOutputHandler postProcessOutputHandler = new JavaFXPostProcessOutputHandler(postProcess,
+                this::resultToRoundResult, this::updateResults);
             Pipeline pipeline = new Pipeline()
-                    .addElement(new DetectSjoelbakElement())
-                    .addElement(new DetectSjoelstenenElement());
+                .addElement(new DetectSjoelbakElement())
+                .addElement(new DetectSjoelstenenElement());
 
             processor = new Processor(inputHandler, null, postProcessOutputHandler, pipeline, lock);
 
@@ -229,11 +234,14 @@ public class SjoelenGuiController {
             case WEBCAM:
                 return new WebcamCaptureInputHandler(sjoelenGuiConfiguration.getWebcamCaptureDevice());
             case IMAGE:
-                return new ImageInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration.getImageCaptureFile()));
+                return new ImageInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration
+                    .getImageCaptureFile()));
             case VIDEO:
-                return new VideoFileCaptureInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration.getVideoCaptureFile()));
+                return new VideoFileCaptureInputHandler(String.format("%s%s", Paths.get(""), sjoelenGuiConfiguration
+                    .getVideoCaptureFile()));
             default:
-                throw new SjoelenGuiException(String.format("Onbekende video capture type [%s] gevonden.", captureType.name()));
+                throw new SjoelenGuiException(String.format("Onbekende video capture type [%s] gevonden.", captureType
+                    .name()));
         }
     }
 
@@ -244,7 +252,8 @@ public class SjoelenGuiController {
         @SuppressWarnings("unchecked")
         List<Sjoelsteen> sjoelstenen = (List<Sjoelsteen>) result.getData().get(DetectSjoelstenenElement.SJOELSTENEN);
 
-        Map<Integer, Integer> amountInPoorten = sjoelstenenMapper.mapSjoelstenenToPoorten(sjoelbak, sjoelstenen, previousRoundResult);
+        Map<Integer, Integer> amountInPoorten = sjoelstenenMapper.mapSjoelstenenToPoorten(sjoelbak, sjoelstenen,
+            previousRoundResult);
 
         return new RoundResult(round.getCurrent(), amountInPoorten);
     }
@@ -258,8 +267,8 @@ public class SjoelenGuiController {
         } else {
             resultList.add(roundResult);
         }
-        
-        if (glass != null && (previousListResult == null || roundResult.getScore() != previousListResult.getScore()) ) {
+
+        if (glass != null && (previousListResult == null || roundResult.getScore() != previousListResult.getScore())) {
             glass.updateResult(resultList);
         }
     }
